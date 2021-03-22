@@ -14,26 +14,26 @@ function Challenge() {
       renderButton: false,
       renderInput: false,
       renderList: true,
-      helpQty: 2,
+      helpQty: 2
     },
     medium: {
       renderButton: false,
       renderInput: false,
       renderList: true,
-      helpQty: 5,
+      helpQty: 5
     },
     hard: {
       renderButton: true,
       renderInput: true,
       renderList: false,
-      helpQty: 0,
-    },
+      helpQty: 0
+    }
   };
   const { difficulty } = useParams();
   const history = useHistory();
   const [pokemonData, setPokemonData] = useState({
     pokemon_name: "",
-    pokemon_img: "",
+    pokemon_img: ""
   });
 
   const [pokemonHelp, setPokemonHelp] = useState([]);
@@ -49,34 +49,47 @@ function Challenge() {
     return n;
   }
 
-  async function fetchData(id) {
+  async function fetchPokemonAndSetAnswers(id, qtyHelp) {
     const pokeData = await axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const pokemons = pokeData.data;
     setPokemonData({
       pokemon_name: pokemons.name,
-      pokemon_img: pokemons.sprites.other.dream_world.front_default,
+      pokemon_img: pokemons.sprites.other.dream_world.front_default
     });
-    setPokemonHelp([pokemons.name]);
-
-    //Este codigo queriamos reutilizar pero tuvimos muchos problemas de promises a resolver a futuro
+    const random = Array.from({ length: qtyHelp }, () =>
+      Math.floor(Math.random() * 40)
+    );
+    setPokemonHelp([pokemons.id, ...random]);
   }
 
-  async function getHelpList(qtyHelp) {
-    for (let index = 0; index < qtyHelp; index++) {
+  async function getAnswers() {
+    const answers = await pokemonHelp.map(async random => {
       let pokeData = await axios.get(
-        `https://pokeapi.co/api/v2/pokemon/${getRandomPokemon()}`
+        `https://pokeapi.co/api/v2/pokemon/${random}`
       );
-      let pokemons = pokeData.data.name;
-      setPokemonHelp((pokemonHelp) => [...pokemonHelp, pokemons]);
-    }
+
+      let pokemon = pokeData.data.name;
+
+      return { name: pokemon, id: random };
+    });
+
+    Promise.all(answers).then(data => {
+      setPokemonHelp(data);
+    });
   }
 
   useEffect(() => {
-    fetchData(getRandomPokemon());
-    if (difficulty != "hard") {
-      getHelpList(params[difficulty].helpQty);
-    }
+    fetchPokemonAndSetAnswers(getRandomPokemon(), params[difficulty].helpQty);
   }, []);
+
+  useEffect(() => {
+    if (
+      pokemonHelp.length > params[difficulty].helpQty &&
+      !pokemonHelp[0].name
+    ) {
+      getAnswers();
+    }
+  }, [pokemonHelp]);
 
   function handleChange(e) {
     setInput(e.target.value);
@@ -84,7 +97,7 @@ function Challenge() {
 
   function handleClick(pokemonSelected) {
     checkAnswer(pokemonSelected);
-    setCounter((prevStatus) => prevStatus + 1);
+    setCounter(prevStatus => prevStatus + 1);
     setTimeout(() => {
       nextPokemon();
       setInput("");
@@ -93,14 +106,14 @@ function Challenge() {
 
   function checkAnswer(answer) {
     if (answer == pokemonData.pokemon_name) {
-      setScore((prevStatus) => prevStatus + 1);
+      setScore(prevStatus => prevStatus + 1);
       setCorrectAnswer(true);
     }
   }
 
   function nextPokemon() {
     setCorrectAnswer(false);
-    fetchData(getRandomPokemon());
+    // fetchData(getRandomPokemon());
   }
 
   function revealPokemon() {}
@@ -128,7 +141,7 @@ function Challenge() {
       {params[difficulty].renderList && (
         <PokemonOptions
           pokemonList={pokemonHelp}
-          pokemonSelected={(pokemonSelected) => handleCallBack(pokemonSelected)}
+          pokemonSelected={pokemonSelected => handleCallBack(pokemonSelected)}
         />
       )}
 
